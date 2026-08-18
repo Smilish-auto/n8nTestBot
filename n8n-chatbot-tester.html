@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>n8n Chatbot Webhook Tester</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/tabler-icons.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --surface-0: #f5f5f5;
+            --surface-1: #ffffff;
+            --surface-2: #fafafa;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --text-success: #22863a;
+            --text-danger: #cb2431;
+            --fill-accent: #0366d6;
+            --on-accent: #ffffff;
+            --fill-success: #28a745;
+            --border: rgba(0, 0, 0, 0.1);
+            --border-strong: rgba(0, 0, 0, 0.2);
+            --radius: 8px;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Menlo, Courier, monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface-0: #0d1117;
+                --surface-1: #161b22;
+                --surface-2: #21262d;
+                --text-primary: #e6edf3;
+                --text-secondary: #8b949e;
+                --text-muted: #6e7681;
+                --text-success: #3fb950;
+                --text-danger: #f85149;
+                --border: rgba(255, 255, 255, 0.1);
+                --border-strong: rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--surface-0);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .sidebar {
+            flex: 0 0 280px;
+            background: var(--surface-1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface-2);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: var(--font-sans);
+            resize: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--fill-accent);
+        }
+
+        textarea {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            min-height: 100px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius);
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: auto;
+        }
+
+        .btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .btn:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        .btn.primary {
+            background: var(--fill-accent);
+            color: var(--on-accent);
+            border-color: var(--fill-accent);
+        }
+
+        .btn.primary:hover {
+            opacity: 0.9;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface-1);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #cccccc;
+            display: inline-block;
+        }
+
+        .status-dot.connected {
+            background: var(--fill-success);
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            flex: 1;
+        }
+
+        .status-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .message {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: var(--fill-accent);
+            color: var(--on-accent);
+        }
+
+        .message.bot .message-bubble {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .message.bot .message-bubble.error {
+            background: rgba(203, 36, 49, 0.1);
+            border-color: var(--text-danger);
+            color: var(--text-danger);
+        }
+
+        .message.bot .message-bubble pre {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .input-area {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-area textarea {
+            flex: 1;
+            max-height: 100px;
+        }
+
+        .send-btn {
+            padding: 12px 16px;
+            background: transparent;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--text-primary);
+            font-weight: 500;
+            height: fit-content;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .send-btn:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        .send-btn i {
+            font-size: 20px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-strong);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo i {
+            font-size: 24px;
+            color: var(--fill-accent);
+        }
+
+        .logo span {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                flex: none;
+                max-height: 40%;
+            }
+
+            .main {
+                flex: 1;
+            }
+
+            .message-bubble {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="ti ti-webhook"></i>
+                <span>n8n Bot</span>
+            </div>
+
+            <h2><i class="ti ti-settings" style="font-size: 18px;"></i> Configuration</h2>
+
+            <div class="form-group">
+                <label>Webhook URL</label>
+                <input type="text" id="webhookUrl" placeholder="https://hook.n8n.cloud/webhook/...">
+            </div>
+
+            <div class="form-group">
+                <label>Bot Name (optional)</label>
+                <input type="text" id="botName" placeholder="My n8n Bot">
+            </div>
+
+            <div class="form-group">
+                <label>Message Key</label>
+                <input type="text" id="messageKey" placeholder="message" value="message">
+            </div>
+
+            <div class="form-group">
+                <label>Response Key</label>
+                <input type="text" id="responseKey" placeholder="response" value="response">
+            </div>
+
+            <button class="btn primary" onclick="connectBot()">
+                <i class="ti ti-plug" style="margin-right: 6px;"></i>Connect Bot
+            </button>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="main">
+            <div class="header">
+                <span class="status-dot" id="statusDot"></span>
+                <h1 id="botTitle">Chatbot</h1>
+                <span class="status-text" id="statusText">(disconnected)</span>
+            </div>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-empty">
+                    Configure your webhook and click "Connect Bot" to start
+                </div>
+            </div>
+
+            <div class="input-area">
+                <textarea id="messageInput" placeholder="Type your message... (Enter to send, Shift+Enter for new line)" disabled></textarea>
+                <button class="send-btn" onclick="sendMessage()" title="Send message">
+                    <i class="ti ti-send"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = {
+            webhook: '',
+            botName: 'Chatbot',
+            messageKey: 'message',
+            responseKey: 'response'
+        };
+
+        function connectBot() {
+            const webhook = document.getElementById('webhookUrl').value.trim();
+            const botName = document.getElementById('botName').value.trim();
+            const messageKey = document.getElementById('messageKey').value.trim() || 'message';
+            const responseKey = document.getElementById('responseKey').value.trim() || 'response';
+
+            if (!webhook) {
+                alert('Please enter a webhook URL');
+                return;
+            }
+
+            config = {
+                webhook,
+                botName: botName || 'Chatbot',
+                messageKey,
+                responseKey
+            };
+
+            localStorage.setItem('botConfig', JSON.stringify(config));
+
+            document.getElementById('botTitle').textContent = config.botName;
+            document.getElementById('statusDot').classList.add('connected');
+            document.getElementById('statusText').textContent = '(connected)';
+            document.getElementById('statusText').style.color = 'var(--text-success)';
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('messageInput').focus();
+
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'message bot';
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = `<strong>${config.botName}</strong><br><br>Connected! Send a message to get started.`;
+            welcomeDiv.appendChild(bubble);
+            chatContainer.appendChild(welcomeDiv);
+        }
+
+        async function sendMessage() {
+            const message = document.getElementById('messageInput').value.trim();
+
+            if (!message) return;
+            if (!config.webhook) {
+                alert('Please connect a bot first');
+                return;
+            }
+
+            const chatContainer = document.getElementById('chatContainer');
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            const userBubble = document.createElement('div');
+            userBubble.className = 'message-bubble';
+            userBubble.textContent = message;
+            userDiv.appendChild(userBubble);
+            chatContainer.appendChild(userDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            document.getElementById('messageInput').value = '';
+
+            // Add loading message
+            const botDiv = document.createElement('div');
+            botDiv.className = 'message bot';
+            botDiv.id = 'bot-' + Date.now();
+            const botBubble = document.createElement('div');
+            botBubble.className = 'message-bubble';
+            botBubble.textContent = 'Thinking...';
+            botDiv.appendChild(botBubble);
+            chatContainer.appendChild(botDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const payload = {};
+                payload[config.messageKey] = message;
+
+                const response = await fetch(config.webhook, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                let botResponse = data[config.responseKey] || JSON.stringify(data, null, 2);
+
+                if (typeof botResponse === 'object') {
+                    botResponse = JSON.stringify(botResponse, null, 2);
+                }
+
+                botBubble.textContent = botResponse;
+                botBubble.style.whiteSpace = 'pre-wrap';
+
+            } catch (error) {
+                botBubble.classList.add('error');
+                botBubble.textContent = '❌ ' + error.message;
+            }
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Load saved config
+        const saved = localStorage.getItem('botConfig');
+        if (saved) {
+            config = JSON.parse(saved);
+            document.getElementById('webhookUrl').value = config.webhook;
+            document.getElementById('botName').value = config.botName;
+            document.getElementById('messageKey').value = config.messageKey;
+            document.getElementById('responseKey').value = config.responseKey;
+            connectBot();
+        }
+    </script>
+</body>
+</html>
